@@ -99,6 +99,13 @@ if( "${CMAKE_SYSTEM_NAME}" STREQUAL "WindowsStore" AND "${CMAKE_SYSTEM_VERSION}"
   ADD_DEFINITIONS(-D_WIN32_WINNT=_WIN32_WINNT_WIN10)
 endif()
 
+# required libraries for Linux
+if (UNIX AND NOT APPLE)
+    list(APPEND MORE_LIBRARIES stdc++)
+    list(APPEND MORE_LIBRARIES rt m)
+    set(CMAKE_POSITION_INDEPENDENT_CODE ON)
+endif()
+
 
 # required libraries for mingw
 if (MINGW)
@@ -160,6 +167,21 @@ IF (LZ4_FOUND)
     add_definitions(-DHAVE_LIBLZ4)
     list(APPEND OPTIONAL_LIBRARIES ${LZ4_LIBRARIES})
 ENDIF (LZ4_FOUND)
+
+########################################################################
+# LIBSODIUM dependency
+########################################################################
+option(WITH_SODIUM OFF)
+IF (WITH_SODIUM)
+find_package(libsodium)
+    IF (LIBSODIUM_FOUND)
+        include_directories(${LIBSODIUM_INCLUDE_DIRS})
+        list(APPEND MORE_LIBRARIES ${LIBSODIUM_LIBRARIES})
+        set(pkg_config_libs_private "${pkg_config_libs_private} -llibsodium")
+        add_definitions(-DHAVE_LIBSODIUM)
+        list(APPEND OPTIONAL_LIBRARIES ${LIBSODIUM_LIBRARIES})
+    ENDIF (LIBSODIUM_FOUND)
+ENDIF()
 
 ########################################################################
 # version
