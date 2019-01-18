@@ -34,6 +34,7 @@ typedef struct {
     zpoller_t *poller;          //  Socket poller
     void *monitored;            //  Monitored libzmq socket
     zsock_t *sink;              //  Sink for monitor events
+    zsock_t *pub;               //  Publish the monitor events
     int events;                 //  Monitored event mask
     bool terminated;            //  Did caller ask us to quit?
     bool verbose;               //  Verbose logging enabled?
@@ -50,6 +51,7 @@ s_self_destroy (self_t **self_p)
 #endif
         zpoller_destroy (&self->poller);
         zsock_destroy (&self->sink);
+        zsock_destroy (&self->pub);
         freen (self);
         *self_p = NULL;
     }
@@ -154,6 +156,7 @@ s_self_listen (self_t *self, const char *event)
 static void
 s_self_start (self_t *self)
 {
+    // Create the sink socket.
     assert (!self->sink);
     char *endpoint = zsys_sprintf ("inproc://zmonitor-%p", self->monitored);
     assert (endpoint);
@@ -168,6 +171,14 @@ s_self_start (self_t *self)
     assert (rc == 0);
     zpoller_add (self->poller, self->sink);
     freen (endpoint);
+
+    // Create the pub socket.
+    endpoint = zsys_sprintf ("inproc://zmonitor-%p-pub", self->monitored);
+    self->pub = zsock_new (ZMQ_PUB);
+    assert (self->sink);
+    rc = zsock_bind (self->pub, "%s", endpoint);
+    assert(rc == 0);
+    freen(endpoint);
 }
 
 
@@ -330,6 +341,7 @@ s_self_handle_sink (self_t *self)
     zstr_sendfm (self->pipe, "%s", name);
     zstr_sendfm (self->pipe, "%d", value);
     zstr_send (self->pipe, address);
+    zstr_send (self->pub, address);
     freen (address);
 #endif
 }
