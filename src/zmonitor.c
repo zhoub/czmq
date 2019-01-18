@@ -175,7 +175,7 @@ s_self_start (self_t *self)
     // Create the pub socket.
     endpoint = zsys_sprintf ("inproc://zmonitor-%p-pub", self->monitored);
     self->pub = zsock_new (ZMQ_PUB);
-    assert (self->sink);
+    assert (self->pub);
     rc = zsock_bind (self->pub, "%s", endpoint);
     assert(rc == 0);
     freen(endpoint);
@@ -341,7 +341,9 @@ s_self_handle_sink (self_t *self)
     zstr_sendfm (self->pipe, "%s", name);
     zstr_sendfm (self->pipe, "%d", value);
     zstr_send (self->pipe, address);
-    zstr_send (self->pub, address);
+
+    zsock_send (self->pub, "siis", "event", name, value, address);
+
     freen (address);
 #endif
 }
